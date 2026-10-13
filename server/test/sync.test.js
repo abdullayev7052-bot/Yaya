@@ -24,14 +24,15 @@ async function login(app) {
   return res.json().token;
 }
 
-test('collector sees only assigned suppliers with price', async () => {
+test('collector sees only assigned suppliers, without prices', async () => {
   const { app } = setup();
   const token = await login(app);
   const res = await app.inject({ url: '/api/mobile/bootstrap', headers: { authorization: `Bearer ${token}` } });
   const { suppliers } = res.json();
   assert.equal(suppliers.length, 1);
   assert.equal(suppliers[0].name, 'Karimova Oydin');
-  assert.equal(suppliers[0].price, 5500);
+  assert.deepEqual(suppliers[0].products, [{ id: 1, name: 'Sut', unit: 'kg', isDefault: true }]);
+  assert.ok(!JSON.stringify(res.json()).includes('5500'), 'price must never reach the phone');
 });
 
 test('sync is idempotent and uses server price', async () => {

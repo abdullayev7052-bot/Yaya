@@ -1,9 +1,9 @@
 // Bito REST API adapter. Everything Bito-specific lives here so the rest of the
 // server does not change when the API details are filled in.
 //
-// TODO(bito-docs): endpoint paths, auth header and payload fields must be taken
-// from https://docs.bito.uz (API section). Until then every call throws, so no
-// fake data ever reaches the database.
+// TODO(bito-docs): endpoint paths, auth (OAuth 2.0 per docs.bito.uz/guide/oauth)
+// and payload fields must be taken from the Bito API reference. Until then every
+// call throws, so no fake data ever reaches the database or Bito.
 
 export class BitoNotConfiguredError extends Error {}
 
@@ -33,14 +33,20 @@ export function createBitoClient({ baseUrl, token } = {}) {
 
   return {
     request,
-    /** @returns {Promise<Array<{bito_id:string,name:string,phone?:string,address?:string}>>} */
+    /** @returns {Promise<Array<{bito_id:string,name:string,phone?:string,address?:string,active?:boolean}>>} */
     async listSuppliers() { return notYet('yetkazib beruvchilar ro\'yxati'); },
-    /** @returns {Promise<Array<{bito_id:string,name:string,unit?:string}>>} */
+    /** @returns {Promise<Array<{bito_id:string,name:string,unit?:string,active?:boolean}>>} */
     async listProducts() { return notYet('mahsulotlar ro\'yxati'); },
     /** @returns {Promise<Array<{bito_id:string,name:string}>>} */
     async listWarehouses() { return notYet('omborlar ro\'yxati'); },
+    /** @returns {Promise<{bito_id:string}>} */
+    async createSupplier(_s /* {name, phone, address} */) { return notYet('yetkazib beruvchi yaratish'); },
+    /** @returns {Promise<{bito_id:string}>} */
+    async createProduct(_p /* {name, unit} */) { return notYet('mahsulot yaratish'); },
+    /** @returns {Promise<{bito_id:string}>} */
+    async createWarehouse(_w /* {name} */) { return notYet('ombor yaratish'); },
     /**
-     * Create and save a purchase (goods receipt into warehouse).
+     * Create and confirm a purchase (goods receipt into warehouse). One document per pickup.
      * @param {{supplierBitoId:string, warehouseBitoId:string, date:string,
      *          items:Array<{productBitoId:string, quantity:number, price:number}>,
      *          externalId:string}} purchase

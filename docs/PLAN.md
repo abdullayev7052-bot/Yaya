@@ -60,10 +60,21 @@ AI/token ishlatilmaydi — oddiy server + REST API.
 | # | Bosqich | Holat |
 |---|---|---|
 | 1 | Reja, repo tuzilmasi | ✅ |
-| 2 | Server: baza, admin login, xodimlar, biriktirishlar, mobil sinxron API | 🔄 boshlandi |
+| 2 | Server: baza, admin login, xodimlar, biriktirishlar, mobil sinxron API | ✅ |
 | 3 | Bito ulagichi (docs.bito.uz + test akkaunt) | ⏳ hujjatlarga kirish kerak |
-| 4 | Admin panel (web) | ⏳ |
-| 5 | Mobil ilova (oflayn navbat, UI) | ⏳ |
+| 4 | Admin panel (web) | ✅ |
+| 5 | Mobil ilova (oflayn navbat, UI) | 🔄 |
 | 6 | APK avtomatik yig'ish (GitHub Actions) + imzolash | ⏳ |
 | 7 | Serverga deploy (VPS) + HTTPS | ⏳ |
 | 8 | Test akkauntda sinov → ishlab chiqarishga o'tish | ⏳ |
+
+## 7. Qabul qilingan qarorlar (mijoz javoblari)
+1. Har bir yetkazib beruvchidan olingan sut — **alohida Bito xarid hujjati**, tasdiqlangan holda.
+2. Har bir sut yig'uvchining **o'z ombori** bor (2–3 xodim). Yig'ilgan sut faqat shu omborga kirim bo'ladi.
+3. Mahsulotlar (yog'li sut, kamdan-kam yog'siz sut) admin panelda yetkazib beruvchiga biriktiriladi, bitta yoki bir nechta.
+   Yetkazib beruvchi/mahsulot/ombor: **Bitoda ochilsa — ilovada paydo bo'ladi; admin panelda ochilsa — Bitoda ham ochiladi.**
+4. Narx har bir yetkazib beruvchi + mahsulot uchun alohida. **Xodimga narx va summa hech qachon ko'rsatilmaydi** (server ham telefonga yubormaydi).
+5. Yog'lilik kiritilmaydi — yog'li/yog'siz sut Bitoda alohida mahsulot.
+6. To'lovlar hozircha faqat Bitoda.
+7. Deploy: **Railway** (Dockerfile + volume `/data`).
+8. Xodimlar o'z Android telefonidan foydalanadi; iOS keyinroq (React Native/Expo — bitta kod).

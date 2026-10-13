@@ -24,18 +24,25 @@ export default async function mobileRoutes(app, { db }) {
     return { token, employee: { id: emp.id, name: emp.name } };
   });
 
-  // Everything the phone needs to work offline: assigned suppliers with their product and price.
+  // Everything the phone needs to work offline: assigned suppliers and the products
+  // each one gives. Prices are deliberately never sent to the collector.
   app.get('/bootstrap', { preHandler: auth }, async (req) => {
+    const emp = db.prepare('SELECT id, name FROM employees WHERE id = ?').get(req.user.id);
     const suppliers = db.prepare(`
-      SELECT s.id, s.name, s.phone, s.address, es.sort_order,
-             p.id AS product_id, p.name AS product_name, p.unit, sp.price
+      SELECT s.id, s.name, s.phone, s.address
       FROM employee_suppliers es
       JOIN suppliers s ON s.id = es.supplier_id AND s.active = 1
-      LEFT JOIN supplier_products sp ON sp.supplier_id = s.id AND sp.is_default = 1
-      LEFT JOIN products p ON p.id = sp.product_id
       WHERE es.employee_id = ?
       ORDER BY es.sort_order, s.name`).all(req.user.id);
-    return { suppliers, serverTime: new Date().toISOString() };
+    const productsOf = db.prepare(`
+      SELECT p.id, p.name, p.unit, sp.is_default
+      FROM supplier_products sp JOIN products p ON p.id = sp.product_id AND p.active = 1
+      WHERE sp.supplier_id = ?
+      ORDER BY sp.is_default DESC, p.name`);
+    for (const s of suppliers) {
+      s.products = productsOf.all(s.id).map((p) => ({ id: p.id, name: p.name, unit: p.unit, isDefault: !!p.is_default }));
+    }
+    return { employee: emp, suppliers, serverTime: new Date().toISOString() };
   });
 
   // Batch upload from the phone's offline queue. Idempotent by client_uuid:
