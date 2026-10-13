@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Yaya",
+    "slug": "yaya",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "uz.yaya.collector"
+    },
+    "android": {
+      "package": "uz.yaya.collector",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#1F7A5A",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": ["android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE"],
+      "blockedPermissions": ["android.permission.RECORD_AUDIO", "android.permission.SYSTEM_ALERT_WINDOW"]
+    },
+    "plugins": [
+      "expo-sqlite",
+      ["expo-build-properties", { "android": { "enableMinifyInReleaseBuilds": true, "enableShrinkResourcesInReleaseBuilds": true } }]
+    ]
+  }
+}

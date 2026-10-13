@@ -1,0 +1,71 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths: ['mobile/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - run: npm ci
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --no-install
+        env:
+          YAYA_API_URL: ${{ vars.YAYA_API_URL }}
+
+      - name: Build release APK
+        working-directory: mobile/android
+        run: ./gradlew assembleRelease --no-daemon -Dorg.gradle.jvmargs=-Xmx4g
+
+      # The APK must always be signed with the SAME key, otherwise Android refuses
+      # to update the app and the only way out is uninstalling (which wipes unsent data).
+      - name: Sign with Yaya release key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::warning::ANDROID_KEYSTORE_BASE64 secret is not set; APK is signed with the public debug key. Do not give this build to collectors."
+            cp "$APK" yaya.apk
+            exit 0
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > release.jks
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          "$BT/apksigner" sign --ks release.jks --ks-pass env:KEYSTORE_PASSWORD \
+            --ks-key-alias "$KEY_ALIAS" --key-pass env:KEY_PASSWORD --out yaya.apk "$APK"
+          "$BT/apksigner" verify --print-certs yaya.apk
+          rm release.jks
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yaya-apk-${{ github.run_number }}
+          path: mobile/yaya.apk
+          retention-days: 30
