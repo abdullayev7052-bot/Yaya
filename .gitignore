@@ -1,0 +1,7 @@
+node_modules/
+server/data/
+*.db
+*.db-*
+.env
+*.keystore
+*.jks
