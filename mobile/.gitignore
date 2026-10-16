@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# fetched at build time from the server
+assets/brand-*.png

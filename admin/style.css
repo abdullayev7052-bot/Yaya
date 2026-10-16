@@ -91,3 +91,15 @@ dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
   header #whoami { flex: 1; text-align: right; }
   main { padding: 12px; }
 }
+
+/* ---- brand & misc ---- */
+.brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; }
+.brand h1 { margin: 0; }
+.brand .logo { width: 32px; height: 32px; object-fit: contain; }
+#brandLogin .logo { width: 64px; height: 64px; }
+.logo-preview { width: 96px; height: 96px; border: 1px dashed var(--line); border-radius: 12px; display: grid; place-items: center; }
+.logo-preview img { max-width: 88px; max-height: 88px; }
+.btnlike { display: inline-block; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--line); cursor: pointer; }
+.warn { color: var(--warn); }
+a { color: var(--accent); }
+fieldset legend { padding: 0 6px; }

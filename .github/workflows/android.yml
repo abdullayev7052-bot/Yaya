@@ -33,6 +33,21 @@ jobs:
 
       - run: npm ci
 
+      # The logo uploaded in the admin panel becomes the launcher icon.
+      # Adaptive icons crop the edges, so the foreground gets a safe-zone margin.
+      - name: Use company logo as app icon
+        env:
+          API_URL: ${{ vars.YAYA_API_URL || 'https://yaya-production-8d61.up.railway.app' }}
+        run: |
+          command -v convert >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick)
+          if curl -fsSL "$API_URL/api/public/logo.png" -o logo.png && file logo.png | grep -q 'PNG image'; then
+            convert logo.png -resize 1024x1024 -gravity center -background white -extent 1024x1024 -flatten assets/brand-icon.png
+            convert logo.png -resize 640x640 -gravity center -background none -extent 1024x1024 assets/brand-foreground.png
+            echo "Company logo applied"
+          else
+            echo "No company logo on the server; using the default icon"
+          fi
+
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install
         env:
