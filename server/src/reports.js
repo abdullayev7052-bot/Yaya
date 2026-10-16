@@ -72,3 +72,28 @@ export function toCsv(rows, headers) {
   // BOM so Excel reads UTF-8 (Uzbek letters) correctly.
   return '﻿' + lines.join('\r\n');
 }
+
+// Weighted average purchase cost per product for one local day:
+//   average cost = Σ round(quantity × price) / Σ quantity
+// i.e. the total money spent divided by the total amount bought — not the plain
+// average of prices, which would give a small supplier the same weight as a big one.
+// The figure is "final" only when every shift that day is closed and approved.
+export function dailyCost(db, day) {
+  const w = where({ from: day, to: day });
+  const products = db.prepare(`SELECT p.id, p.name, p.unit, ${AGG},
+      COUNT(DISTINCT c.supplier_id) AS suppliers, MIN(c.price) AS min_price, MAX(c.price) AS max_price
+    ${BASE} WHERE ${w.sql} GROUP BY p.id ORDER BY quantity DESC`).all(w.params)
+    .map((p) => ({ ...p, avg_cost: p.quantity ? Math.round((p.amount / p.quantity) * 100) / 100 : null }));
+  const shifts = db.prepare(`SELECT s.status, COUNT(*) AS n FROM shifts s JOIN employees e ON e.id = s.employee_id
+    WHERE e.is_test = 0 AND date(s.opened_at, '+5 hours') = ? GROUP BY s.status`).all(day);
+  const count = Object.fromEntries(shifts.map((r) => [r.status, r.n]));
+  const qty = products.reduce((a, p) => a + p.quantity, 0);
+  const amount = products.reduce((a, p) => a + p.amount, 0);
+  return {
+    day,
+    products,
+    overall: { quantity: Math.round(qty * 100) / 100, amount, avg_cost: qty ? Math.round((amount / qty) * 100) / 100 : null },
+    shifts: { open: count.open ?? 0, closed: count.closed ?? 0, approved: count.approved ?? 0, rejected: count.rejected ?? 0 },
+    final: !(count.open || count.closed || count.rejected),
+  };
+}

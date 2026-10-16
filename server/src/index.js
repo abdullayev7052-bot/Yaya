@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { openDb } from './db/index.js';
+import { openDb, roleIdByCode } from './db/index.js';
 import { buildApp } from './app.js';
 import { jwtSecret } from './settings.js';
 
@@ -15,7 +15,7 @@ const db = openDb(DB_FILE);
 
 // First start: create the admin from env so no shell access is needed on the host.
 if (ADMIN_LOGIN && ADMIN_PASSWORD && !db.prepare('SELECT 1 FROM users LIMIT 1').get()) {
-  db.prepare(`INSERT INTO users (login, password_hash, role) VALUES (?, ?, 'admin')`).run(ADMIN_LOGIN, bcrypt.hashSync(ADMIN_PASSWORD, 10));
+  db.prepare('INSERT INTO users (login, password_hash, role_id) VALUES (?, ?, ?)').run(ADMIN_LOGIN, bcrypt.hashSync(ADMIN_PASSWORD, 10), roleIdByCode(db, 'admin'));
   console.log(`Admin "${ADMIN_LOGIN}" yaratildi`);
 }
 

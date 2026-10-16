@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import mobileRoutes from './routes/mobile.js';
 import adminRoutes from './routes/admin.js';
+import publicRoutes from './routes/public.js';
 
 const ADMIN_DIR = fileURLToPath(new URL('../../admin', import.meta.url));
 // Web build of the collector app (same code as the APK), used to test from a laptop.
@@ -20,12 +21,13 @@ export function buildApp({ db, jwtSecret, logger = false }) {
     reply.header('Referrer-Policy', 'no-referrer');
     // The panel embeds the web app in an iframe from the same origin; nobody else may.
     reply.header('X-Frame-Options', 'SAMEORIGIN');
-    if (req.url.startsWith('/api/')) reply.header('Cache-Control', 'no-store');
+    if (req.url.startsWith('/api/') && !req.url.startsWith('/api/public/logo')) reply.header('Cache-Control', 'no-store');
   });
 
   app.get('/health', async () => ({ ok: true }));
   app.register(mobileRoutes, { prefix: '/api/mobile', db });
   app.register(adminRoutes, { prefix: '/api/admin', db });
+  app.register(publicRoutes, { prefix: '/api/public', db });
   app.register(fastifyStatic, { root: ADMIN_DIR, prefix: '/admin/' });
   if (existsSync(WEBAPP_DIR)) {
     app.register(fastifyStatic, { root: WEBAPP_DIR, prefix: '/app/', decorateReply: false });

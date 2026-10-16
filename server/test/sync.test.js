@@ -5,7 +5,7 @@ import Database from 'better-sqlite3';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { openDb } from '../src/db/index.js';
+import { openDb, roleIdByCode } from '../src/db/index.js';
 import { buildApp } from '../src/app.js';
 import { toCsv } from '../src/reports.js';
 
@@ -22,7 +22,8 @@ function setup() {
     (1, 'Ali', '901112233', ?, 1, 0), (2, 'Test', '900000000', ?, 1, 1)`).run(hash, hash);
   db.exec('INSERT INTO employee_suppliers (employee_id, supplier_id) VALUES (1, 1), (2, 1)');
   const pw = bcrypt.hashSync('secret123', 4);
-  db.prepare(`INSERT INTO users (login, password_hash, role) VALUES ('boss', ?, 'admin'), ('mgr', ?, 'manager'), ('view', ?, 'viewer')`).run(pw, pw, pw);
+  const addUser = db.prepare('INSERT INTO users (login, password_hash, role_id) VALUES (?, ?, ?)');
+  for (const [login, code] of [['boss', 'admin'], ['mgr', 'manager'], ['view', 'viewer'], ['store', 'storekeeper']]) addUser.run(login, pw, roleIdByCode(db, code));
   const app = buildApp({ db, jwtSecret: 'test-secret' });
   return { db, app };
 }
@@ -101,7 +102,8 @@ test('roles: viewer reads only, manager edits data, only admin manages users', a
   // The last admin cannot remove their own admin rights.
   const users = (await app.inject({ url: '/api/admin/users', headers: boss })).json();
   const me = users.find((u) => u.login === 'boss');
-  assert.equal((await app.inject({ method: 'PATCH', url: `/api/admin/users/${me.id}`, headers: boss, payload: { role: 'viewer' } })).statusCode, 400);
+  const viewerRole = users.find((u) => u.login === 'view').role_id;
+  assert.equal((await app.inject({ method: 'PATCH', url: `/api/admin/users/${me.id}`, headers: boss, payload: { roleId: viewerRole } })).statusCode, 400);
 });
 
 test('login brute-force guard and deactivated collectors', async () => {
@@ -136,7 +138,7 @@ test('migrates a v1 database: keeps admins, drops empty mirrored tables', () => 
     INSERT INTO settings VALUES ('jwt_secret', 'keep'), ('ext_token', 'x');`);
   old.close();
   const db = openDb(file);
-  assert.equal(db.prepare('SELECT role FROM users WHERE login = ?').get('admin').role, 'admin');
+  assert.equal(db.prepare('SELECT role_id FROM users WHERE login = ?').get('admin').role_id, roleIdByCode(db, 'admin'));
   assert.equal(db.prepare("SELECT value FROM settings WHERE key = 'jwt_secret'").get().value, 'keep');
   assert.equal(db.prepare("SELECT COUNT(*) n FROM settings WHERE key = 'ext_token'").get().n, 0);
   assert.ok(!db.prepare('PRAGMA table_info(suppliers)').all().some((c) => c.name === 'ext_id'));
