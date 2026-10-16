@@ -44,9 +44,13 @@ Imzo to'g'ri bo'lsa, logda "Sign with Yaya release key" qadamida sertifikat chiq
    ⚠️ Ilovani **o'chirmang** va "Ma'lumotlarni tozalash"ni bosmang — yuborilmagan yozuvlar yo'qoladi.
 
 ## 4. Birinchi sozlash (boshqaruv paneli)
-1. **Mahsulot va omborlar** → mahsulotlar (Yog'li sut, Yog'siz sut) va har bir sut yig'uvchi uchun ombor.
-2. **Yetkazib beruvchilar** → qo'shish → **+ Narx** bilan mahsulot va narx (★ asosiy).
-3. **Sut yig'uvchilar** → qo'shish (telefon + PIN + ombor) → **Biriktirish** (tartib = yo'nalish).
-4. **Foydalanuvchilar** → menejer / kuzatuvchi (buxgalter) qo'shish.
-5. **Ilovani sinash** → test xodim bilan noutbukda sinab ko'ring.
-6. Xodim telefonida: telefon raqami + PIN bilan kiradi → **Smenani ochish**.
+1. **Sozlamalar** → kompaniya nomi va **logo** (PNG/JPG). Panel va ilovada darhol ko'rinadi;
+   telefon ikonkasi keyingi APK yig'ishda logoga almashadi.
+2. **Mahsulot va omborlar** → mahsulotlar (Yog'li sut, Yog'siz sut) va har bir sut yig'uvchi uchun ombor.
+3. **Yetkazib beruvchilar** → bittalab qo'shing yoki **⬇ Excel shablon** → to'ldirib → **⬆ Excel'dan import**
+   (ism, telefon, manzil, mahsulot, narx, hozirgi qarz). Import oldidan tekshiruv natijasi ko'rsatiladi.
+4. **Foydalanuvchilar va ruxsatlar** → rollarni sozlang (masalan: sut yig'uvchi o'z xatosini bekor qila oladimi,
+   dalada to'lov kirita oladimi) → menejer, omborchi, buxgalter uchun login yarating.
+5. **Sut yig'uvchilar** → qo'shish (telefon + PIN + ombor + rol) → **Biriktirish** (tartib = yo'nalish).
+6. **Ilovani sinash** → test xodim bilan noutbukda sinab ko'ring; "Rahbar" rejimini ham shu yerda ko'rasiz.
+7. Telefonda: **Sut yig'uvchi** — telefon + PIN; **Rahbar** — panel login/paroli.

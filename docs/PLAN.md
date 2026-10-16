@@ -3,59 +3,71 @@
 ## Maqsad
 Sut yig'uvchi (haydovchi) yo'lda, internet bo'lmasa ham, 3 ta bosishda xaridni kiritadi:
 **yetkazib beruvchini bosadi → kg kiritadi → OK**.
-Yaya — **to'liq mustaqil** tizim: o'z bazasi, o'z hisob-kitobi, o'z analitikasi.
-Hech qanday tashqi dasturga bog'liq emas.
+Yaya — **to'liq mustaqil** tizim: o'z bazasi, o'z hisob-kitobi, o'z analitikasi, o'z ruxsatlar tizimi.
 
 ## Arxitektura
 ```
  [Android ilova]  --(HTTPS, oflayn navbat)-->  [Yaya server: Node.js + SQLite]  <--  [Boshqaruv paneli (brauzer)]
-  SQLite (telefonda)                            Railway, volume /data                  + ilovaning brauzer versiyasi (test)
+  · Sut yig'uvchi rejimi (oflayn)               Railway, volume /data                  + ilovaning brauzer versiyasi (/app/)
+  · Rahbar rejimi (onlayn)
 ```
 
 | Qism | Texnologiya |
 |---|---|
 | Server | Node.js + Fastify + SQLite (bitta fayl baza, volume'da) |
 | Boshqaruv paneli | Server ichida statik HTML/JS, grafiklar o'zimizniki (SVG) |
-| Mobil | React Native (Expo), telefonda SQLite; iOS ham shu koddan |
-| Brauzer test | Mobil ilovaning o'zi web'ga yig'iladi (`/app/`), panel ichida telefon ramkasida |
-| APK | GitHub Actions, bitta doimiy kalit bilan imzolanadi |
+| Mobil | React Native (Expo); telefonda SQLite; iOS ham shu koddan |
+| Brauzer test | Mobil ilovaning o'zi web'ga yig'iladi (`/app/`) |
+| APK | GitHub Actions; doimiy kalit bilan imzolanadi; ikonka = yuklangan logo |
 
-## Rollar
-| Rol | Qayerda | Nima qila oladi |
+## Ruxsatlar tizimi
+Admin **rollar** tuzadi (ruxsatlar to'plami) va ularni odamlarga biriktiradi. Tayyor rollar:
+
+| Rol | Kimga | Asosiy ruxsatlar |
 |---|---|---|
-| **Admin** | Panel | Hammasi: foydalanuvchilar, rollar, jurnal, test ma'lumotlarini tozalash |
-| **Menejer** | Panel | Sut yig'uvchilar, yetkazib beruvchilar, narxlar, mahsulot/omborlar, yozuvni bekor qilish |
-| **Kuzatuvchi** | Panel | Faqat ko'rish, hisobotlar, Excel eksport (masalan, buxgalter) |
-| **Sut yig'uvchi** | Mobil ilova | Smena, o'ziga biriktirilgan yetkazib beruvchilardan sut qabul qilish. Narx va summani **ko'rmaydi** |
+| **Admin** | Egasi | Hammasi (o'zgartirib bo'lmaydi — o'zini qulflab qo'ymaslik uchun) |
+| **Menejer** | Boshqaruvchi | Ma'lumotlar, narxlar, to'lovlar, hisobotlar |
+| **Omborchi** | Qabul qiluvchi | Xaridlarni ko'rish/tuzatish, smenani tasdiqlash yoki rad etish; summalarni ko'rmaydi |
+| **Kuzatuvchi** | Buxgalter | Faqat ko'rish, hisobotlar, Excel |
+| **Sut yig'uvchi** | Haydovchi | Sut qabul qilish, o'z xatosini tuzatish/bekor qilish (smena tasdiqlanguncha), tarix |
+
+26 ta ruxsat bor (panelda "Foydalanuvchilar va ruxsatlar" bo'limida guruhlab ko'rsatilgan), jumladan:
+narx/summalarni ko'rish, to'lov kiritish/bekor qilish, smenani tasdiqlash, Excel import/eksport, logo,
+sut yig'uvchining dalada naqd to'lov kiritishi. Ruxsatlar **serverda** tekshiriladi; summalarni ko'rish
+ruxsati bo'lmasa, server javobidan narx va summalar olib tashlanadi.
 
 ## Hisob-kitob qoidalari
-- Narx har bir yetkazib beruvchi + mahsulot uchun alohida; yozuv tushganda narx **o'sha paytdagi** qiymat bilan muhrlanadi — keyin narx o'zgarsa, tarix o'zgarmaydi.
-- Summa = `round(miqdor × narx)` har bir yozuv uchun; jami — shu yaxlitlangan summalar yig'indisi. Barcha ekran va Excel bir xil raqam beradi.
-- Kun — Toshkent vaqti (UTC+5) bo'yicha.
-- Xato yozuv **o'chirilmaydi** — sababi bilan "bekor qilinadi", jamidan chiqadi, tiklash mumkin.
-- Test sut yig'uvchi yozuvlari hisobotlarga kirmaydi.
+- Narx har bir yetkazib beruvchi + mahsulot uchun alohida; yozuv tushganda narx **muhrlanadi**.
+- Summa = `round(miqdor × narx)` har bir yozuv uchun; jami — shu summalar yig'indisi.
+- **Qarz** = boshlang'ich qarz + olingan sut summasi − to'lovlar (musbat — biz qarzmiz, manfiy — avans).
+- **O'rtacha tannarx** = jami summa ÷ jami miqdor (vaznli o'rtacha). Kunning barcha smenalari yopilib,
+  tasdiqlangandan keyin "yakuniy" deb belgilanadi.
+- Kun — Toshkent vaqti (UTC+5). Xato yozuv va to'lov **o'chirilmaydi** — sababi bilan bekor qilinadi.
+- Test sut yig'uvchining yozuv va to'lovlari hisobotlar va qarzlarga kirmaydi.
+
+## Smena oqimi
+`ochiq` → (sut yig'uvchi yopadi) → `tasdiq kutmoqda` → (omborchi/rahbar) → `tasdiqlangan` yoki `rad etilgan` (sababi bilan).
+Tasdiqlangan smena yozuvlarini sut yig'uvchi endi o'zgartira olmaydi; rad etilgan smena sababi ilovada ko'rinadi.
 
 ## Himoya
 - Parollar bcrypt; panel sessiyasi 12 soat, mobil 180 kun (oflayn ishlash uchun).
-- Login'ga ketma-ket 8 xato urinishdan keyin 15 daqiqa blok.
-- O'chirilgan foydalanuvchi/xodim darhol tizimdan chiqariladi.
-- Oxirgi admin o'zini o'chira olmaydi.
-- Har bir muhim amal jurnalga yoziladi (kim, qachon, nima).
-- Excel eksportda formula-injection'dan himoya.
+- Login'ga 8 xato urinishdan keyin 15 daqiqa blok. O'chirilgan foydalanuvchi darhol chiqariladi.
+- Har bir muhim amal jurnalga yoziladi. Excel eksportda formula-injection'dan himoya.
+- Logo faqat PNG (brauzerda kvadrat 512×512 ga keltiriladi), SVG qabul qilinmaydi.
 
 ## Oflayn kafolatlar (telefon)
-- Har bir yozuv OK bosilishi bilan telefonning ichki bazasiga yoziladi; "Keshni tozalash" uni o'chirmaydi.
-- Kiritilayotgan raqam ham har bosishda saqlanadi — ilova yopilsa, o'sha joydan davom etadi.
-- Internet chiqishi bilan (va har 30 soniyada) avtomatik yuboriladi; takror yuborish ikki marta yozmaydi.
+- Har bir yozuv, tuzatish va to'lov OK bosilishi bilan telefon bazasiga yoziladi; "Keshni tozalash" o'chirmaydi.
+- Internet chiqishi bilan (va har 30 soniyada) yuboriladi; takror yuborish ikki marta yozmaydi.
+- Server rad etgan yozuv sababi bilan ko'rsatiladi va admin tuzatgach qayta yuboriladi.
 
 ## Bosqichlar
 | # | Bosqich | Holat |
 |---|---|---|
-| 1 | Server, baza, mobil sinxron | ✅ |
-| 2 | Boshqaruv paneli: ma'lumotnomalar, narxlar, biriktirish | ✅ |
-| 3 | Mobil ilova (oflayn), APK avtomatik yig'ish | ✅ |
-| 4 | Railway deploy (volume) | ✅ |
-| 5 | Mustaqil tizim: rollar, analitika, grafiklar, Excel, bekor qilish, jurnal | ✅ |
-| 6 | Brauzerda ilovani sinash (`/app/`) | ✅ |
-| 7 | Telefonda real sinov, xodimlarga tarqatish | ⏳ |
-| 8 | Keyingi funksiyalar: to'lovlar va qarz balansi, yetkazib beruvchi kartochkasi, sifat (yog'lilik), SMS/Telegram xabar, iOS | ⏳ |
+| 1 | Server, baza, mobil sinxron, panel, APK, Railway | ✅ |
+| 2 | Mustaqil tizim: analitika, grafiklar, Excel, bekor qilish, jurnal, brauzer test | ✅ |
+| 3 | To'lovlar va qarz, yetkazib beruvchi kartochkasi (akt-sverka), o'rtacha tannarx | ✅ |
+| 4 | Rollar va ruxsatlar, smenani tasdiqlash, sut yig'uvchining o'z xatosini tuzatishi, dala to'lovi | ✅ |
+| 5 | Mobil "Rahbar" rejimi, telefon bo'yicha qidiruv, Excel import, logo | ✅ |
+| 6 | Telegram'ga kunlik hisobot | ⏳ tayyorgarlik: [NEXT.md](NEXT.md) |
+| 7 | Manzil va geolokatsiya | ⏳ tayyorgarlik: [NEXT.md](NEXT.md) |
+| 8 | iOS versiya | ⏳ tayyorgarlik: [NEXT.md](NEXT.md) |

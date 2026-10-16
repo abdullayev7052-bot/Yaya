@@ -1,7 +1,7 @@
 # Yaya
 
 Sut yig'uvchilar uchun oflayn ishlaydigan mobil ilova + boshqaruv paneli. To'liq mustaqil tizim.
-Reja: [docs/PLAN.md](docs/PLAN.md) · Deploy va o'rnatish: [docs/DEPLOY.md](docs/DEPLOY.md)
+Reja: [docs/PLAN.md](docs/PLAN.md) · Deploy va o'rnatish: [docs/DEPLOY.md](docs/DEPLOY.md) · Keyingi bosqichlar: [docs/NEXT.md](docs/NEXT.md)
 
 ## Tuzilma
 - `server/` — Node.js API (mobil sinxron, panel, hisobotlar), SQLite
