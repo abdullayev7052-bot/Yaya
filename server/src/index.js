@@ -1,27 +1,31 @@
+import bcrypt from 'bcryptjs';
 import { openDb } from './db/index.js';
 import { buildApp } from './app.js';
 import { createBitoClient, BitoNotConfiguredError } from './bito/client.js';
 import { pushPendingCollections } from './bito/worker.js';
 import { syncReferenceData } from './bito/sync.js';
+import { bitoConfig, jwtSecret } from './settings.js';
 
 const {
   PORT = '3000',
   DB_FILE = './data/yaya.db',
   JWT_SECRET,
-  BITO_BASE_URL,
-  BITO_TOKEN,
+  ADMIN_LOGIN,
+  ADMIN_PASSWORD,
   BITO_PUSH_INTERVAL_SEC = '30',
   BITO_PULL_INTERVAL_SEC = '300',
 } = process.env;
 
-if (!JWT_SECRET) {
-  console.error('JWT_SECRET muhit o\'zgaruvchisi kerak');
-  process.exit(1);
+const db = openDb(DB_FILE);
+
+// First start: create the admin from env so no shell access is needed on the host.
+if (ADMIN_LOGIN && ADMIN_PASSWORD && !db.prepare('SELECT 1 FROM admins LIMIT 1').get()) {
+  db.prepare('INSERT INTO admins (login, password_hash) VALUES (?, ?)').run(ADMIN_LOGIN, bcrypt.hashSync(ADMIN_PASSWORD, 10));
+  console.log(`Admin "${ADMIN_LOGIN}" yaratildi`);
 }
 
-const db = openDb(DB_FILE);
-const bito = createBitoClient({ baseUrl: BITO_BASE_URL, token: BITO_TOKEN });
-const app = buildApp({ db, bito, jwtSecret: JWT_SECRET, logger: true });
+const bito = createBitoClient({ getConfig: () => bitoConfig(db) });
+const app = buildApp({ db, bito, jwtSecret: jwtSecret(db, JWT_SECRET), logger: true });
 
 // Runs a job on an interval, never overlapping with itself.
 function every(seconds, name, job) {

@@ -7,8 +7,14 @@
 
 export class BitoNotConfiguredError extends Error {}
 
-export function createBitoClient({ baseUrl, token } = {}) {
+// `getConfig` lets the admin change the Bito connection at runtime (settings page)
+// without restarting the server.
+export function createBitoClient({ baseUrl, token, getConfig } = {}) {
+  const config = () => (getConfig ? getConfig() : { baseUrl, token });
+  const isConfigured = () => { const c = config(); return !!(c.baseUrl && c.token); };
+
   async function request(method, path, body) {
+    const { baseUrl, token } = config();
     if (!baseUrl || !token) throw new BitoNotConfiguredError('Bito ulanishi sozlanmagan');
     const res = await fetch(new URL(path, baseUrl), {
       method,
@@ -32,6 +38,7 @@ export function createBitoClient({ baseUrl, token } = {}) {
   };
 
   return {
+    isConfigured,
     request,
     /** @returns {Promise<Array<{bito_id:string,name:string,phone?:string,address?:string,active?:boolean}>>} */
     async listSuppliers() { return notYet('yetkazib beruvchilar ro\'yxati'); },

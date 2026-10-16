@@ -65,6 +65,81 @@ $('#bitoSync').addEventListener('click', act(async () => {
 }));
 
 const views = {
+  async dashboard(v) {
+    const q = new URLSearchParams(location.hash.split('?')[1]);
+    const d = await api('GET', '/dashboard' + (q.get('date') ? '?date=' + q.get('date') : ''));
+    const totals = {};
+    for (const r of d.byEmployee) {
+      const k = `${r.product_name} (${r.unit || 'kg'})`;
+      totals[k] = (totals[k] || 0) + r.quantity;
+    }
+    const sumAmount = d.byEmployee.reduce((a, r) => a + r.amount, 0);
+    v.innerHTML = `
+      ${d.bitoConfigured ? '' : '<div class="card err">Bito ulanishi sozlanmagan — xaridlar navbatda turibdi. "Sozlamalar" bo\'limiga o\'ting.</div>'}
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
+          <h2>Kunlik hisobot</h2>
+          <input type="date" id="day" value="${esc(d.date)}">
+        </div>
+        <div class="row" style="gap:24px">
+          ${Object.entries(totals).map(([k, n]) => `<div><div class="muted">${esc(k)}</div><div style="font-size:28px;font-weight:700">${fmtNum(n)}</div></div>`).join('')
+            || '<p class="muted">Bu kunda xarid yo\'q</p>'}
+          ${d.byEmployee.length ? `<div><div class="muted">Summa</div><div style="font-size:28px;font-weight:700">${fmtNum(sumAmount)}</div></div>` : ''}
+        </div>
+      </div>
+      <div class="card"><div class="table-wrap"><table>
+        <tr><th>Xodim</th><th>Mahsulot</th><th>Uylar</th><th>Miqdor</th><th>Summa</th></tr>
+        ${d.byEmployee.map((r) => `<tr><td>${esc(r.employee_name)}</td><td>${esc(r.product_name)}</td><td>${r.pickups}</td>
+          <td>${fmtNum(r.quantity)} ${esc(r.unit)}</td><td>${fmtNum(r.amount)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">—</td></tr>'}
+      </table></div></div>
+      <div class="card">
+        <h2>Holat</h2>
+        <p>Bitoga yuborilgan: <b>${d.queue.sent || 0}</b> · Navbatda: <b>${d.queue.pending || 0}</b> ·
+          Xato: <b class="${d.queue.error ? 'err' : ''}">${d.queue.error || 0}</b></p>
+        <p>Ochiq smenalar: ${d.openShifts.map((s) => `${esc(s.name)} (${esc(fmtDate(s.opened_at))})`).join(', ') || '<span class="muted">yo\'q</span>'}</p>
+      </div>`;
+    $('#day').onchange = (e) => { location.hash = 'dashboard?date=' + e.target.value; };
+  },
+
+  async settings(v) {
+    const st = await api('GET', '/settings');
+    v.innerHTML = `
+      <form class="card" id="bito">
+        <h2>Bito ulanishi ${st.bitoConfigured ? '<span class="badge sent">sozlangan</span>' : '<span class="badge error">sozlanmagan</span>'}</h2>
+        <div class="row">
+          <label>Bito API manzili <input name="bitoBaseUrl" value="${esc(st.bitoBaseUrl)}" placeholder="https://..."></label>
+          <label>Token ${st.bitoTokenSet ? '(saqlangan — o\'zgartirish uchun yangisini kiriting)' : ''}
+            <input name="bitoToken" type="password" autocomplete="off"></label>
+          <button>Saqlash</button>
+          <button type="button" class="ghost" id="test">Tekshirish</button>
+        </div>
+      </form>
+      <form class="card" id="pw">
+        <h2>Admin parolini o'zgartirish</h2>
+        <div class="row">
+          <label>Joriy parol <input name="current" type="password" required autocomplete="current-password"></label>
+          <label>Yangi parol (kamida 8 belgi) <input name="next" type="password" required minlength="8" autocomplete="new-password"></label>
+          <button>O'zgartirish</button>
+        </div>
+      </form>`;
+    $('#bito').onsubmit = act(async (e) => {
+      e.preventDefault();
+      await api('PUT', '/settings', Object.fromEntries(new FormData(e.target)));
+      flash('Saqlandi');
+      route();
+    });
+    $('#test').onclick = act(async () => {
+      const r = await api('POST', '/bito/sync');
+      flash(`Ulanish ishlayapti: ${r.suppliers} yetkazib beruvchi, ${r.products} mahsulot, ${r.warehouses} ombor`);
+    });
+    $('#pw').onsubmit = act(async (e) => {
+      e.preventDefault();
+      await api('PUT', '/password', Object.fromEntries(new FormData(e.target)));
+      e.target.reset();
+      flash('Parol o\'zgartirildi');
+    });
+  },
+
   async collections(v) {
     const status = new URLSearchParams(location.hash.split('?')[1]).get('status') || '';
     const rows = await api('GET', '/collections' + (status ? '?status=' + status : ''));
@@ -264,11 +339,11 @@ const views = {
 };
 
 const route = act(async () => {
-  const name = (location.hash.slice(1).split('?')[0]) || 'collections';
+  const name = (location.hash.slice(1).split('?')[0]) || 'dashboard';
   document.querySelectorAll('header nav a').forEach((a) => a.classList.toggle('active', a.getAttribute('href') === '#' + name));
   const v = $('#view');
   v.innerHTML = '<p class="muted">Yuklanmoqda...</p>';
-  await (views[name] || views.collections)(v);
+  await (views[name] || views.dashboard)(v);
 });
 
 window.addEventListener('hashchange', () => token && route());

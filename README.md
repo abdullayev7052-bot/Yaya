@@ -13,14 +13,9 @@ To'liq reja: [docs/PLAN.md](docs/PLAN.md)
 ```bash
 cd server
 npm install
-npm run create-admin -- admin MaxfiyParol
-JWT_SECRET=uzun-tasodifiy-satr npm start
+ADMIN_LOGIN=admin ADMIN_PASSWORD=MaxfiyParol npm start
 npm test
 ```
 
-## Railway'ga deploy
-1. Railway → New Project → Deploy from GitHub repo → `yaya`.
-2. Service → Settings → Volumes → **Add volume**, mount path: `/data` (baza shu yerda saqlanadi).
-3. Variables: `JWT_SECRET` (uzun tasodifiy satr), `BITO_BASE_URL`, `BITO_TOKEN`.
-4. Settings → Networking → **Generate domain**. Admin panel: `https://<domen>/admin/`.
-5. Birinchi admin: Railway service → ⋯ → Shell: `npm run create-admin -- admin <parol>`.
+## Deploy va o'rnatish
+Qadamma-qadam: [docs/DEPLOY.md](docs/DEPLOY.md) (Railway, GitHub Secrets, APK, telefonga o'rnatish, birinchi sozlash).

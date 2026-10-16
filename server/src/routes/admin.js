@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { BitoNotConfiguredError } from '../bito/client.js';
 import { syncReferenceData } from '../bito/sync.js';
+import { bitoConfig, setSetting } from '../settings.js';
 
 // API used by the admin panel.
 export default async function adminRoutes(app, { db, bito }) {
@@ -36,6 +37,43 @@ export default async function adminRoutes(app, { db, bito }) {
     r.addHook('preHandler', auth);
 
     r.post('/bito/sync', viaBito(async () => syncReferenceData(db, bito)));
+
+    // Bito connection settings. The token is never sent back, only whether one is set.
+    r.get('/settings', async () => {
+      const c = bitoConfig(db);
+      return { bitoBaseUrl: c.baseUrl, bitoTokenSet: !!c.token, bitoConfigured: bito.isConfigured() };
+    });
+    r.put('/settings', async (req) => {
+      const { bitoBaseUrl, bitoToken } = req.body ?? {};
+      if (bitoBaseUrl !== undefined) setSetting(db, 'bito_base_url', String(bitoBaseUrl).trim().replace(/\/+$/, ''));
+      if (bitoToken) setSetting(db, 'bito_token', String(bitoToken).trim());
+      return { ok: true };
+    });
+
+    r.put('/password', async (req, reply) => {
+      const { current, next } = req.body ?? {};
+      const a = db.prepare('SELECT * FROM admins WHERE id = ?').get(req.user.id);
+      if (!a || !bcrypt.compareSync(current ?? '', a.password_hash)) return reply.code(400).send({ error: 'Joriy parol noto\'g\'ri' });
+      if (!next || String(next).length < 8) return reply.code(400).send({ error: 'Yangi parol kamida 8 belgi bo\'lsin' });
+      db.prepare('UPDATE admins SET password_hash = ? WHERE id = ?').run(bcrypt.hashSync(String(next), 10), a.id);
+      return { ok: true };
+    });
+
+    // Today's picture: per collector and product, plus the Bito queue state.
+    r.get('/dashboard', async (req) => {
+      const day = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date ?? '') ? req.query.date : new Date().toISOString().slice(0, 10);
+      const byEmployee = db.prepare(`
+        SELECT e.name AS employee_name, p.name AS product_name, p.unit,
+               COUNT(*) AS pickups, SUM(c.quantity) AS quantity, SUM(c.quantity * c.price) AS amount
+        FROM collections c JOIN employees e ON e.id = c.employee_id JOIN products p ON p.id = c.product_id
+        WHERE date(c.collected_at, '+5 hours') = ?
+        GROUP BY e.id, p.id ORDER BY e.name, p.name`).all(day);
+      const queue = Object.fromEntries(db.prepare('SELECT bito_status, COUNT(*) n FROM collections GROUP BY bito_status')
+        .all().map((x) => [x.bito_status, x.n]));
+      const openShifts = db.prepare(`SELECT e.name, s.opened_at FROM shifts s JOIN employees e ON e.id = s.employee_id
+        WHERE s.closed_at IS NULL ORDER BY s.opened_at`).all();
+      return { date: day, byEmployee, queue, openShifts, bitoConfigured: bito.isConfigured() };
+    });
 
     r.get('/suppliers', async () => db.prepare('SELECT * FROM suppliers ORDER BY active DESC, name').all());
     r.get('/products', async () => db.prepare('SELECT * FROM products ORDER BY active DESC, name').all());

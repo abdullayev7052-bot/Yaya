@@ -5,6 +5,7 @@ import { openDb } from '../src/db/index.js';
 import { buildApp } from '../src/app.js';
 import { pushPendingCollections } from '../src/bito/worker.js';
 import { createBitoClient } from '../src/bito/client.js';
+import { bitoConfig } from '../src/settings.js';
 
 function setup() {
   const db = openDb(':memory:');
@@ -15,7 +16,7 @@ function setup() {
     .run(bcrypt.hashSync('1234', 4));
   db.prepare(`INSERT INTO employee_suppliers (employee_id, supplier_id) VALUES (1, 1)`).run();
   db.prepare(`INSERT INTO supplier_products (supplier_id, product_id, price) VALUES (1, 1, 5500)`).run();
-  const app = buildApp({ db, jwtSecret: 'test-secret' });
+  const app = buildApp({ db, jwtSecret: 'test-secret', bito: createBitoClient({ getConfig: () => bitoConfig(db, {}) }) });
   return { db, app };
 }
 
@@ -76,4 +77,26 @@ test('worker marks rows sent when Bito accepts', async () => {
   assert.equal(calls[0].warehouseBitoId, 'W1');
   assert.deepEqual(calls[0].items, [{ productBitoId: 'P1', quantity: 5, price: 5500 }]);
   assert.equal(db.prepare('SELECT bito_status FROM collections').get().bito_status, 'sent');
+});
+
+test('admin dashboard and runtime Bito settings', async () => {
+  const { app, db } = setup();
+  db.prepare(`INSERT INTO admins (login, password_hash) VALUES ('admin', ?)`).run(bcrypt.hashSync('secret123', 4));
+  const token = await login(app);
+  await app.inject({ method: 'POST', url: '/api/mobile/sync', headers: { authorization: `Bearer ${token}` },
+    payload: { collections: [{ uuid: 'u-1', supplierId: 1, productId: 1, quantity: 30, collectedAt: '2026-10-13T20:30:00Z' }] } });
+  const adm = (await app.inject({ method: 'POST', url: '/api/admin/login', payload: { login: 'admin', password: 'secret123' } })).json().token;
+  const h = { authorization: `Bearer ${adm}` };
+
+  // 20:30 UTC is already the next day in Tashkent (UTC+5).
+  const d = (await app.inject({ url: '/api/admin/dashboard?date=2026-10-14', headers: h })).json();
+  assert.equal(d.byEmployee[0].quantity, 30);
+  assert.equal(d.byEmployee[0].amount, 30 * 5500);
+  assert.equal(d.queue.pending, 1);
+
+  await app.inject({ method: 'PUT', url: '/api/admin/settings', headers: h, payload: { bitoBaseUrl: 'https://x.bito.online/', bitoToken: 'tok' } });
+  const st = (await app.inject({ url: '/api/admin/settings', headers: h })).json();
+  assert.equal(st.bitoBaseUrl, 'https://x.bito.online');
+  assert.equal(st.bitoTokenSet, true);
+  assert.ok(!JSON.stringify(st).includes('tok"'), 'token must not be returned');
 });
