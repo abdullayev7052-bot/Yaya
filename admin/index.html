@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Yaya — Admin</title>
+<title>Yaya — Boshqaruv</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="login" class="center" hidden>
   <form id="loginForm" class="card narrow">
-    <h1>Yaya admin</h1>
+    <h1>Yaya</h1>
     <label>Login <input name="login" required autocomplete="username"></label>
     <label>Parol <input name="password" type="password" required autocomplete="current-password"></label>
     <button>Kirish</button>
@@ -20,21 +20,15 @@
 <div id="main" hidden>
   <header>
     <b>Yaya</b>
-    <nav>
-      <a href="#dashboard">Bugun</a>
-      <a href="#collections">Xaridlar</a>
-      <a href="#employees">Xodimlar</a>
-      <a href="#suppliers">Yetkazib beruvchilar</a>
-      <a href="#products">Mahsulotlar</a>
-      <a href="#warehouses">Omborlar</a>
-      <a href="#settings">Sozlamalar</a>
-    </nav>
-    <button class="ghost" id="bitoSync" title="Bitodan yetkazib beruvchi, mahsulot va omborlarni yangilash">⟳ Bitodan yangilash</button>
+    <nav id="nav"></nav>
+    <span class="role" id="whoami"></span>
     <button class="ghost" id="logout">Chiqish</button>
   </header>
   <p id="flash" hidden></p>
   <main id="view"></main>
 </div>
+<dialog id="dlg"></dialog>
+<script src="charts.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

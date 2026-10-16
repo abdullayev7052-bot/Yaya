@@ -20,11 +20,3 @@ export function jwtSecret(db, fromEnv) {
   }
   return s;
 }
-
-// Admin-panel values win over env, so the connection can be fixed without a redeploy.
-export function bitoConfig(db, env = process.env) {
-  return {
-    baseUrl: getSetting(db, 'bito_base_url') || env.BITO_BASE_URL || '',
-    token: getSetting(db, 'bito_token') || env.BITO_TOKEN || '',
-  };
-}

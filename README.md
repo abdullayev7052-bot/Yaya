@@ -1,21 +1,20 @@
 # Yaya
 
-Sut yig'uvchilar uchun oflayn ishlaydigan mobil ilova + admin panel + Bito integratsiyasi.
-To'liq reja: [docs/PLAN.md](docs/PLAN.md)
+Sut yig'uvchilar uchun oflayn ishlaydigan mobil ilova + boshqaruv paneli. To'liq mustaqil tizim.
+Reja: [docs/PLAN.md](docs/PLAN.md) · Deploy va o'rnatish: [docs/DEPLOY.md](docs/DEPLOY.md)
 
 ## Tuzilma
-- `server/` — Node.js API (mobil sinxron, admin, Bito ulagichi)
-- `admin/` — admin panel (server `/admin/` manzilida ochiladi)
-- `mobile/` — Android ilova (Expo / React Native; iOS ham shu koddan)
-- `.github/workflows/android.yml` — har push'da APK avtomatik yig'iladi (GitHub → Actions → Artifacts)
+- `server/` — Node.js API (mobil sinxron, panel, hisobotlar), SQLite
+- `admin/` — boshqaruv paneli (`/admin/`)
+- `mobile/` — Android ilova (Expo / React Native). Brauzer versiyasi `/app/` da (test uchun)
+- `.github/workflows/android.yml` — APK avtomatik yig'iladi
 
-## Serverni ishga tushirish
+## Lokal ishga tushirish
 ```bash
-cd server
-npm install
-ADMIN_LOGIN=admin ADMIN_PASSWORD=MaxfiyParol npm start
+cd server && npm install
+ADMIN_LOGIN=admin ADMIN_PASSWORD=MaxfiyParol123 npm start   # http://localhost:3000/admin/
 npm test
-```
 
-## Deploy va o'rnatish
-Qadamma-qadam: [docs/DEPLOY.md](docs/DEPLOY.md) (Railway, GitHub Secrets, APK, telefonga o'rnatish, birinchi sozlash).
+# brauzer test-ilovasi uchun (ixtiyoriy):
+cd ../mobile && npm install && npx expo export --platform web   # server /app/ da beradi
+```

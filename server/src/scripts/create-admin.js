@@ -8,7 +8,7 @@ if (!login || !password) {
   process.exit(1);
 }
 const db = openDb(process.env.DB_FILE ?? './data/yaya.db');
-db.prepare(`INSERT INTO admins (login, password_hash) VALUES (?, ?)
-  ON CONFLICT(login) DO UPDATE SET password_hash = excluded.password_hash`)
+db.prepare(`INSERT INTO users (login, password_hash, role) VALUES (?, ?, 'admin')
+  ON CONFLICT(login) DO UPDATE SET password_hash = excluded.password_hash, role = 'admin', active = 1`)
   .run(login, bcrypt.hashSync(password, 10));
 console.log(`Admin "${login}" saqlandi`);

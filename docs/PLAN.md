@@ -1,80 +1,61 @@
-# Yaya — Sut yig'ish ilovasi: to'liq reja
+# Yaya — reja
 
-## 1. Maqsad
+## Maqsad
 Sut yig'uvchi (haydovchi) yo'lda, internet bo'lmasa ham, 3 ta bosishda xaridni kiritadi:
 **yetkazib beruvchini bosadi → kg kiritadi → OK**.
-Server bu yozuvni avtomatik ravishda **Bito**da "Yangi xarid" (kirim) hujjatiga aylantiradi:
-yetkazib beruvchi, mahsulot, narx, ombor — hammasi admin panelda oldindan sozlangan.
-AI/token ishlatilmaydi — oddiy server + REST API.
+Yaya — **to'liq mustaqil** tizim: o'z bazasi, o'z hisob-kitobi, o'z analitikasi.
+Hech qanday tashqi dasturga bog'liq emas.
 
-## 2. Arxitektura
-
+## Arxitektura
 ```
- [Android ilova]  --(HTTPS, navbat)-->  [Yaya server]  --(REST API)-->  [Bito]
-  SQLite (oflayn)                        SQLite/Postgres                kokand-test.bito.online
-                                          + Bito sync worker
- [Admin panel (brauzer)] -------------->  [Yaya server]
+ [Android ilova]  --(HTTPS, oflayn navbat)-->  [Yaya server: Node.js + SQLite]  <--  [Boshqaruv paneli (brauzer)]
+  SQLite (telefonda)                            Railway, volume /data                  + ilovaning brauzer versiyasi (test)
 ```
 
-| Qism | Texnologiya | Nega |
+| Qism | Texnologiya |
+|---|---|
+| Server | Node.js + Fastify + SQLite (bitta fayl baza, volume'da) |
+| Boshqaruv paneli | Server ichida statik HTML/JS, grafiklar o'zimizniki (SVG) |
+| Mobil | React Native (Expo), telefonda SQLite; iOS ham shu koddan |
+| Brauzer test | Mobil ilovaning o'zi web'ga yig'iladi (`/app/`), panel ichida telefon ramkasida |
+| APK | GitHub Actions, bitta doimiy kalit bilan imzolanadi |
+
+## Rollar
+| Rol | Qayerda | Nima qila oladi |
 |---|---|---|
-| Server | Node.js + Fastify + SQLite | Bitta fayl baza, oddiy deploy, tez |
-| Admin panel | Server ichida statik HTML (alohida build yo'q) | Sodda, bitta joyga joylanadi |
-| Mobil | React Native (Expo) + expo-sqlite | Bitta kod, APK GitHub Actions orqali avtomatik yig'iladi |
-| APK yig'ish | GitHub Actions (`gradlew assembleRelease`) | Kompyuteringizga Android Studio kerak emas |
+| **Admin** | Panel | Hammasi: foydalanuvchilar, rollar, jurnal, test ma'lumotlarini tozalash |
+| **Menejer** | Panel | Sut yig'uvchilar, yetkazib beruvchilar, narxlar, mahsulot/omborlar, yozuvni bekor qilish |
+| **Kuzatuvchi** | Panel | Faqat ko'rish, hisobotlar, Excel eksport (masalan, buxgalter) |
+| **Sut yig'uvchi** | Mobil ilova | Smena, o'ziga biriktirilgan yetkazib beruvchilardan sut qabul qilish. Narx va summani **ko'rmaydi** |
 
-## 3. Ma'lumotlar modeli (server)
-- `admins` — admin login/parol (bcrypt)
-- `employees` — sut yig'uvchilar (ism, telefon, PIN/parol, faol/nofaol, Bitodagi ombor = mashina ombori)
-- `suppliers` — Bitodan sinxronlanadi (bito_id, ism, telefon, manzil)
-- `products` — Bitodan sinxronlanadi (bito_id, nom, o'lchov birligi)
-- `warehouses` — Bitodan sinxronlanadi (har bir mashina = ombor)
-- `supplier_products` — qaysi yetkazib beruvchi qaysi mahsulotni qancha narxda beradi
-- `employee_suppliers` — qaysi xodimga qaysi yetkazib beruvchilar biriktirilgan
-- `shifts` — smena (ochildi/yopildi, xodim)
-- `collections` — har bir sut olish: `client_uuid` (qurilmada yaratiladi, takrorlanishdan himoya), xodim, yetkazib beruvchi, mahsulot, miqdor, narx, vaqt, holat (`pending` → `sent` / `error`), Bito hujjat ID
+## Hisob-kitob qoidalari
+- Narx har bir yetkazib beruvchi + mahsulot uchun alohida; yozuv tushganda narx **o'sha paytdagi** qiymat bilan muhrlanadi — keyin narx o'zgarsa, tarix o'zgarmaydi.
+- Summa = `round(miqdor × narx)` har bir yozuv uchun; jami — shu yaxlitlangan summalar yig'indisi. Barcha ekran va Excel bir xil raqam beradi.
+- Kun — Toshkent vaqti (UTC+5) bo'yicha.
+- Xato yozuv **o'chirilmaydi** — sababi bilan "bekor qilinadi", jamidan chiqadi, tiklash mumkin.
+- Test sut yig'uvchi yozuvlari hisobotlarga kirmaydi.
 
-## 4. Bito integratsiyasi (nima qamrab olinadi)
-1. **Ulanish**: admin panelda Bito manzili + API kalit/token kiritiladi (login/parol serverda saqlanmaydi, faqat token).
-2. **Spravochniklarni olish** (Bito → Yaya): yetkazib beruvchilar, mahsulotlar, omborlar, (kerak bo'lsa) narx turlari. Har N daqiqada + webhook bo'lsa darhol.
-3. **Xarid yaratish** (Yaya → Bito): har bir yig'ilgan sut uchun (yoki smena yopilganda bitta jamlangan hujjat — *savol 3*) "xarid" hujjati: yetkazib beruvchi, ombor, mahsulot, miqdor, narx → saqlash → omborga kirim.
-4. **Qayta urinish**: Bito javob bermasa, yozuv `pending` qoladi va worker keyinroq qayta yuboradi. Ikki marta yuborilmasligi uchun `client_uuid` ishlatiladi.
-5. **Holatni ko'rsatish**: admin panelda har bir yozuvning Bitoga tushgan/tushmaganligi.
+## Himoya
+- Parollar bcrypt; panel sessiyasi 12 soat, mobil 180 kun (oflayn ishlash uchun).
+- Login'ga ketma-ket 8 xato urinishdan keyin 15 daqiqa blok.
+- O'chirilgan foydalanuvchi/xodim darhol tizimdan chiqariladi.
+- Oxirgi admin o'zini o'chira olmaydi.
+- Har bir muhim amal jurnalga yoziladi (kim, qachon, nima).
+- Excel eksportda formula-injection'dan himoya.
 
-> Bito API'ning aniq endpointlari docs.bito.uz dan o'qilgandan keyin `server/src/bito/client.js` ichida to'ldiriladi. Qolgan butun tizim shu modulga bog'liq emas.
+## Oflayn kafolatlar (telefon)
+- Har bir yozuv OK bosilishi bilan telefonning ichki bazasiga yoziladi; "Keshni tozalash" uni o'chirmaydi.
+- Kiritilayotgan raqam ham har bosishda saqlanadi — ilova yopilsa, o'sha joydan davom etadi.
+- Internet chiqishi bilan (va har 30 soniyada) avtomatik yuboriladi; takror yuborish ikki marta yozmaydi.
 
-## 5. Mobil ilova oqimi
-1. **Kirish** — telefon + PIN (bir marta; keyin eslab qoladi, oflayn ham ochiladi).
-2. **Smenani ochish** — bitta katta tugma.
-3. **Ro'yxat** — faqat shu xodimga biriktirilgan yetkazib beruvchilar; tepada qidiruv; bugun olinganlar ✓ belgisi va kg bilan.
-4. **Kiritish** — katta raqamli klaviatura, mahsulot avtomatik (admin sozlagan), narx avtomatik, **OK**.
-5. **Smenani yopish** — jami kg, nechta uy, sinxron holati.
-
-### Oflayn kafolatlar
-- Har bir yozuv **OK bosilishi bilan darhol** telefonning ichki SQLite bazasiga yoziladi (ilovaning shaxsiy xotirasi). Android "Keshni tozalash" bu ma'lumotni **o'chirmaydi** (faqat "Ma'lumotlarni tozalash"/o'chirib tashlash o'chiradi — bunga qarshi ham himoya: ilova sozlamasida `allowBackup` + PIN bilan himoyalangan "ma'lumotni tozalash" ogohlantiruvchi ko'rsatma).
-- Kiritish oynasidagi yozilayotgan raqam ham har bosishda saqlanadi → ilovani "oxirgilar"dan o'chirib yuborsa ham, qayta ochilganda o'sha joyidan davom etadi.
-- Internet paydo bo'lishi bilan (va har 30 soniyada) navbatdagi yozuvlar serverga yuboriladi. Server `client_uuid` bo'yicha takrorni rad etadi → hech narsa ikki marta tushmaydi.
-- Yozuv qurilmadan faqat server "qabul qildim" deganidan keyin ham **o'chirilmaydi**, faqat "yuborildi" belgisi qo'yiladi (tarix uchun 30 kun saqlanadi).
-
-## 6. Bosqichlar
+## Bosqichlar
 | # | Bosqich | Holat |
 |---|---|---|
-| 1 | Reja, repo tuzilmasi | ✅ |
-| 2 | Server: baza, admin login, xodimlar, biriktirishlar, mobil sinxron API | ✅ |
-| 3 | Bito ulagichi (docs.bito.uz + test akkaunt) | ⏳ hujjatlarga kirish kerak |
-| 4 | Admin panel (web) | ✅ |
-| 5 | Mobil ilova (oflayn navbat, UI) | 🔄 |
-| 6 | APK avtomatik yig'ish (GitHub Actions) + imzolash | ⏳ |
-| 7 | Serverga deploy (VPS) + HTTPS | ⏳ |
-| 8 | Test akkauntda sinov → ishlab chiqarishga o'tish | ⏳ |
-
-## 7. Qabul qilingan qarorlar (mijoz javoblari)
-1. Har bir yetkazib beruvchidan olingan sut — **alohida Bito xarid hujjati**, tasdiqlangan holda.
-2. Har bir sut yig'uvchining **o'z ombori** bor (2–3 xodim). Yig'ilgan sut faqat shu omborga kirim bo'ladi.
-3. Mahsulotlar (yog'li sut, kamdan-kam yog'siz sut) admin panelda yetkazib beruvchiga biriktiriladi, bitta yoki bir nechta.
-   Yetkazib beruvchi/mahsulot/ombor: **Bitoda ochilsa — ilovada paydo bo'ladi; admin panelda ochilsa — Bitoda ham ochiladi.**
-4. Narx har bir yetkazib beruvchi + mahsulot uchun alohida. **Xodimga narx va summa hech qachon ko'rsatilmaydi** (server ham telefonga yubormaydi).
-5. Yog'lilik kiritilmaydi — yog'li/yog'siz sut Bitoda alohida mahsulot.
-6. To'lovlar hozircha faqat Bitoda.
-7. Deploy: **Railway** (Dockerfile + volume `/data`).
-8. Xodimlar o'z Android telefonidan foydalanadi; iOS keyinroq (React Native/Expo — bitta kod).
+| 1 | Server, baza, mobil sinxron | ✅ |
+| 2 | Boshqaruv paneli: ma'lumotnomalar, narxlar, biriktirish | ✅ |
+| 3 | Mobil ilova (oflayn), APK avtomatik yig'ish | ✅ |
+| 4 | Railway deploy (volume) | ✅ |
+| 5 | Mustaqil tizim: rollar, analitika, grafiklar, Excel, bekor qilish, jurnal | ✅ |
+| 6 | Brauzerda ilovani sinash (`/app/`) | ✅ |
+| 7 | Telefonda real sinov, xodimlarga tarqatish | ⏳ |
+| 8 | Keyingi funksiyalar: to'lovlar va qarz balansi, yetkazib beruvchi kartochkasi, sifat (yog'lilik), SMS/Telegram xabar, iOS | ⏳ |

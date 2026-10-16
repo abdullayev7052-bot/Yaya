@@ -13,7 +13,6 @@
    | `ADMIN_PASSWORD` | kuchli parol (kamida 12 belgi) |
 
    `JWT_SECRET` shart emas — server o'zi yaratib, bazada saqlaydi.
-   Bito manzili va tokeni keyin admin paneldagi **Sozlamalar** bo'limidan kiritiladi.
 5. Service → **Settings → Networking → Generate Domain** → masalan `yaya-production.up.railway.app`.
 6. Tekshirish: `https://<domen>/health` → `{"ok":true}`; admin panel: `https://<domen>/admin/`.
 7. Kirgandan so'ng **Sozlamalar → Admin parolini o'zgartirish** (ixtiyoriy) va Railway'dagi
@@ -28,8 +27,8 @@ GitHub → repo → **Settings → Secrets and variables → Actions**.
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_KEY_PASSWORD`
 
-**Variables** tabida → **New repository variable**:
-- `YAYA_API_URL` = `https://<railway-domen>` (oxirida `/` siz)
+Server manzili ilova kodiga yozilgan (`mobile/app.config.js`). Boshqa serverga o'tilsa,
+**Variables** tabida `YAYA_API_URL` = `https://<domen>` qo'shiladi.
 
 Keyin **Actions → Android APK → Run workflow** → branch tanlang → **Run**.
 ~10 daqiqadan so'ng run sahifasida **Artifacts → yaya-apk-N** paydo bo'ladi.
@@ -44,10 +43,10 @@ Imzo to'g'ri bo'lsa, logda "Sign with Yaya release key" qadamida sertifikat chiq
 5. Yangilash: yangi APK'ni xuddi shunday o'rnating — eski ma'lumotlar saqlanib qoladi (imzo bir xil bo'lgani uchun).
    ⚠️ Ilovani **o'chirmang** va "Ma'lumotlarni tozalash"ni bosmang — yuborilmagan yozuvlar yo'qoladi.
 
-## 4. Birinchi sozlash (admin panel)
-1. **Sozlamalar** → Bito manzili va token → **Tekshirish**.
-2. **⟳ Bitodan yangilash** → yetkazib beruvchilar, mahsulotlar, omborlar keladi.
-3. **Omborlar** → har bir sut yig'uvchiga alohida ombor (Bitoda yo'q bo'lsa shu yerda yaratiladi).
-4. **Xodimlar** → xodim qo'shish (telefon + PIN + ombor) → **Yetkazib beruvchilar** tugmasi bilan biriktirish.
-5. **Yetkazib beruvchilar** → har biriga mahsulot va narx (★ asosiy).
+## 4. Birinchi sozlash (boshqaruv paneli)
+1. **Mahsulot va omborlar** → mahsulotlar (Yog'li sut, Yog'siz sut) va har bir sut yig'uvchi uchun ombor.
+2. **Yetkazib beruvchilar** → qo'shish → **+ Narx** bilan mahsulot va narx (★ asosiy).
+3. **Sut yig'uvchilar** → qo'shish (telefon + PIN + ombor) → **Biriktirish** (tartib = yo'nalish).
+4. **Foydalanuvchilar** → menejer / kuzatuvchi (buxgalter) qo'shish.
+5. **Ilovani sinash** → test xodim bilan noutbukda sinab ko'ring.
 6. Xodim telefonida: telefon raqami + PIN bilan kiradi → **Smenani ochish**.

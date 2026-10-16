@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as api from './src/api';
 import * as store from './src/db';
 import SyncBar from './src/SyncBar';
+import { ask, notify } from './src/dialog';
 import { C, fmtQty, fmtTime, s } from './src/ui';
 
 export default function App() {
@@ -159,10 +160,10 @@ function StartShift({ employee, tick, onOpen, onLogout }) {
           style={s.btnGhost}
           onPress={() => {
             if (pending) {
-              Alert.alert('Chiqib bo\'lmaydi', `${pending} ta yozuv hali serverga yuborilmagan. Internetga ulaning.`);
+              notify('Chiqib bo\'lmaydi', `${pending} ta yozuv hali serverga yuborilmagan. Internetga ulaning.`);
               return;
             }
-            Alert.alert('Chiqish', 'Hisobdan chiqasizmi?', [{ text: 'Yo\'q' }, { text: 'Ha', onPress: onLogout }]);
+            ask('Chiqish', 'Hisobdan chiqasizmi?', 'Ha', onLogout);
           }}
         >
           <Text style={[s.btnGhostText, { color: C.muted }]}>Hisobdan chiqish</Text>
@@ -223,7 +224,7 @@ function ShiftView({ shift, employee, tick, onPick, onClosed }) {
           return (
             <Pressable
               onPress={() => (noProduct
-                ? Alert.alert('Mahsulot yo\'q', 'Bu yetkazib beruvchiga admin mahsulot biriktirmagan.')
+                ? notify('Mahsulot yo\'q', 'Bu yetkazib beruvchiga admin mahsulot biriktirmagan.')
                 : onPick(item))}
               style={({ pressed }) => [s.card, { flexDirection: 'row', alignItems: 'center', minHeight: 68 },
                 got && { borderColor: C.ok }, pressed && { opacity: 0.6 }]}
@@ -255,10 +256,18 @@ const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', ',', '0', '⌫'];
 
 function Entry({ draft, onChange, onCancel, onSave }) {
   const supplier = api.getSuppliers().find((x) => x.id === draft.supplierId);
+  const keys = useRef(null);
   useEffect(() => {
     // Supplier was unassigned while a draft was open: drop the draft.
     if (!supplier) onCancel();
   }, [supplier, onCancel]);
+  useEffect(() => {
+    // Browser tester: allow typing on the laptop keyboard as well.
+    if (Platform.OS !== 'web') return undefined;
+    const onKey = (e) => keys.current?.(e);
+    globalThis.addEventListener('keydown', onKey);
+    return () => globalThis.removeEventListener('keydown', onKey);
+  }, []);
   if (!supplier) return null;
 
   const product = supplier.products.find((p) => p.id === draft.productId) ?? supplier.products[0];
@@ -279,8 +288,18 @@ function Entry({ draft, onChange, onCancel, onSave }) {
     if (!(value > 0)) return;
     const doSave = () => onSave(supplier, product, value);
     if (value > 1000) {
-      Alert.alert('Tekshiring', `${fmtQty(value)} ${product.unit || 'kg'} — to'g'rimi?`, [{ text: 'Yo\'q' }, { text: 'Ha, saqlash', onPress: doSave }]);
+      ask('Tekshiring', `${fmtQty(value)} ${product.unit || 'kg'} — to'g'rimi?`, 'Ha, saqlash', doSave);
     } else doSave();
+  };
+
+  keys.current = (e) => {
+    if (/^\d$/.test(e.key)) press(e.key);
+    else if (e.key === ',' || e.key === '.') press(',');
+    else if (e.key === 'Backspace') press('⌫');
+    else if (e.key === 'Enter') save();
+    else if (e.key === 'Escape') onCancel();
+    else return;
+    e.preventDefault();
   };
 
   return (

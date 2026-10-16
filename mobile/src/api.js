@@ -1,9 +1,10 @@
 import Constants from 'expo-constants';
 import NetInfo from '@react-native-community/netinfo';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import * as store from './db';
 
-const DEFAULT_URL = Constants.expoConfig?.extra?.apiUrl ?? '';
+// In the browser tester the app is served by the same server it talks to.
+const DEFAULT_URL = Platform.OS === 'web' ? globalThis.location?.origin ?? '' : Constants.expoConfig?.extra?.apiUrl ?? '';
 
 export const getServerUrl = () => store.getKv('serverUrl', DEFAULT_URL);
 export const setServerUrl = (url) => store.setKv('serverUrl', url.trim().replace(/\/+$/, ''));

@@ -1,13 +1,20 @@
 import bcrypt from 'bcryptjs';
+import { audit } from '../db/index.js';
+import { createLoginGuard } from '../ratelimit.js';
 
 // API used by the collector's phone.
 export default async function mobileRoutes(app, { db }) {
+  const guard = createLoginGuard();
   const auth = async (req, reply) => {
     try {
       await req.jwtVerify();
-      if (req.user.role !== 'employee') throw new Error('role');
+      if (req.user.kind !== 'employee') throw new Error('kind');
     } catch {
       return reply.code(401).send({ error: 'Avtorizatsiya kerak' });
+    }
+    // A deactivated collector is logged out on the next sync.
+    if (!db.prepare('SELECT 1 FROM employees WHERE id = ? AND active = 1').get(req.user.id)) {
+      return reply.code(401).send({ error: 'Hisobingiz o\'chirilgan. Adminga murojaat qiling.' });
     }
   };
 
@@ -15,13 +22,20 @@ export default async function mobileRoutes(app, { db }) {
     schema: { body: { type: 'object', required: ['phone', 'pin'],
       properties: { phone: { type: 'string' }, pin: { type: 'string' } } } },
   }, async (req, reply) => {
-    const emp = db.prepare('SELECT * FROM employees WHERE phone = ? AND active = 1').get(req.body.phone);
+    const phone = req.body.phone.replace(/\D/g, '');
+    const key = `${req.ip}|${phone}`;
+    const wait = guard.blocked(key);
+    if (wait) return reply.code(429).send({ error: `Juda ko'p urinish. ${wait} daqiqadan keyin qayta urinib ko'ring.` });
+    const emp = db.prepare('SELECT * FROM employees WHERE phone = ? AND active = 1').get(phone);
     if (!emp || !bcrypt.compareSync(req.body.pin, emp.pin_hash)) {
+      guard.fail(key);
       return reply.code(401).send({ error: 'Telefon yoki PIN noto\'g\'ri' });
     }
+    guard.reset(key);
+    audit(db, `employee:${emp.phone}`, 'login');
     // Long-lived token: collectors may stay offline for days.
-    const token = app.jwt.sign({ role: 'employee', id: emp.id }, { expiresIn: '180d' });
-    return { token, employee: { id: emp.id, name: emp.name } };
+    const token = app.jwt.sign({ kind: 'employee', id: emp.id }, { expiresIn: '180d' });
+    return { token, employee: { id: emp.id, name: emp.name, isTest: !!emp.is_test } };
   });
 
   // Everything the phone needs to work offline: assigned suppliers and the products
